@@ -1,0 +1,112 @@
+I am going to drop an AI library into the ai module.
+
+It is Ian Millington's code from his AI book.
+
+I will leave the comments as they are to distinguish his
+from our's.
+
+Some of the code he uses depends on windows, and other libraries
+that I don't want the ai code to depend on, so these files
+will either be left out entirely or modified to comment out 
+the code we don't want.
+
+
+Here is a log of the procedure:
+Copied files from aicore/src to ai/cpp.
+Copied all header files from aicore/include to ai/include.
+Added the files to the geng project in the ai sub-folder.
+That did not work properly because the include folder "aicore" is not present.
+Moved the entire aicore folder to the ai folder.
+Actually, we don't need all of the aicore subfolders, just src and include.
+All the header files are in ai/aicore, and the src files are in ai/aicore/src.
+Added aicore to the project, in the subfolder geng/ai.
+Added the sub-folder geng/ai/aicore/src
+Added the files to the project under the above folders.
+Added the include path to geng/ai/aicore to the project for all configurations.
+In Visual studio, when you change the include paths, the project is cleaned.
+Error: Could not find include <aicore/aicore.h>
+Changed the include path from geng/ai/aicore to geng/ai.
+Again, everything had to rebuild...
+timing.h depends on windows.h, removed timing.h and timing.cpp
+Removed reference to timing.h from aicore.h
+Removed reference to TimingData from randomSeed() function in core.cpp
+dectree.cpp also contains references to TimingData::get().frameNumber.
+Removed those references
+Everthing compiles OK now.
+
+
+Now that the aicore has been dropped-in, it is time to integrate an
+example usage of aicore into geng.
+ 
+
+I will start with the c03_steering example.
+This contains a single source file called steering_demo.cpp
+
+Basically two kinematic objects are created, and various behaviors are
+defined and attached to the kinematic objects.
+
+The update function updates the kinematic objects according to the time
+and their respective behaviors.
+
+Then the renderAgent() function is called with the kinematic's position 
+and orientation and draws the objects.
+
+
+The design for geng:
+
+Two Actor objects will be created.  Each will have a kinematic object
+associated with it.  Their behaviors will need to be set, and attached
+to other Actors, in this case, each other.  This is needed for seeking
+and fleeing.
+
+We will need to do this from the geng api for now.  Later we might want
+to create an application object that does not use the geng api.  So it
+still needs to be decided what purpose the geng api has, if any.  I feel
+there is a purpose, since a higher-level api can be useful if it is
+flexible enough for general purposes yet still remain relatively simple.
+
+So, from the geng api, after creating an entity, you should be able to
+create and attach an actor to it.  Then you should be able to setup the
+behaviors of the actor, and set the current behavior for an actor at
+any time.
+
+
+Implementation Log:
+
+First the kimematic field is added to the Actor class.
+
+Added the following to Actor.h:
+
+    #include <aicore/aicore.h>
+    using namespace aicore;
+    ...
+    aicore::Kinematic *kinematic;
+
+Build error.  Commented out the definition of M_PI in precision.h.  I 
+believe that this is defined in math.h and this is a re-definition.
+Now it builds OK again.
+Added the instantiation of kinematic in Actor.cpp.
+Deleted kinematic in the Actor destructor.
+Now for the behaviors.  This particular example using the SteeringBehavior
+class for its behaviors.  I will go ahead and add a steering behavior field
+to the Actor class, but later the Actor class may need to be specialized
+for other types of behaviors.
+Modified the SteeringDemo::update function for use in Actor::update.
+Copied over the macro definition for TRIM_WORLD.
+Removed the AIActorController field from Actor.
+Removed yawSpeed and velocity fields from Actor.
+Need a way to add behaviors to the Actor and set the current behavior.
+For now, just do this by passing in strings.  This is sloppy, but it can
+still work nicely.
+Added methods addBehavior and setCurrentBehavior to Actor.
+Added string-->SteeringBehavior map to Actor.
+Added getPosition() and getYaw() to Actor.
+Modified Entity's update method to change according to the Actor's position.
+Added setTarget() to Actor for the flee and seek behaviors.
+Added Actor methods to geng.h and geng.cpp.
+Hard-coded the y-value from the ai engine to the value 2.0, since the
+ai engine sets this value to 0, which displays the objects under the terrain.
+Negated the value of the yaw returned by the ai engine - the yaw seemed
+ to be reversed. 
+Modified the deltaTime by dividing by 3 to reduce the speed of the objects.
+
