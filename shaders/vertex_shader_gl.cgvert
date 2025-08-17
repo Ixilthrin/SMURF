@@ -1,0 +1,11 @@
+void main(float4 position : POSITION,
+          out float4 oPosition : POSITION,
+          uniform float4x4 worldViewProj)
+{
+    // Transform position from object space to clip space
+    //oPosition = mul(position, worldViewProj);
+    oPosition = mul(worldViewProj, position);
+    float4x4 m = float4x4(.8165, 0, .8165, 0, 0, 1.732, 0, -2.21, .707, 0, -707, 9.6, .707, 0, -.707, 10);
+    //float4x4 m = float4x4(1.0, 0, 0, 0, 0, 1.0, 0, 0, 0, 0, 1, 0, .0, 0, 0, 1);
+    //oPosition = mul(m, position);
+}

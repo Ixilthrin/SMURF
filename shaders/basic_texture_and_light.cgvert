@@ -1,0 +1,60 @@
+struct appin
+{
+    float3 position  : POSITION;
+    unsigned int color0  :  COLOR0;
+    float3 normal  : NORMAL;
+    float2 texcoord0 : TEXCOORD0;
+    float2 texcoord1 : TEXCOORD1;
+};
+
+struct fragment
+{
+	float4 position  : POSITION;
+	float4 color0    : COLOR0;
+	float2 texcoord0 : TEXCOORD0;
+};
+
+//-----------------------------------------------------------------------------
+// IN            - incoming per-vertex data to be processed
+// worldViewProj - combined world-view-projection matrix
+//-----------------------------------------------------------------------------
+fragment main(appin IN,
+	      uniform float4x4 worldViewProj)
+
+{
+    fragment OUT;
+
+    float4 v = float4(IN.position.x,
+	              IN.position.y,
+                      IN.position.z,
+                      1.0f );
+
+    OUT.position  = mul( worldViewProj, v );
+    OUT.color0    = IN.color0;
+    OUT.texcoord0 = IN.texcoord0;
+
+    float3 lightPosition = float3(1, 1, 1);
+    float3 eyePosition = float3(1, 1, 1);
+    float3 P = OUT.position.xyz;
+    float3 N = IN.normal;
+    float3 emissive = .5;
+    float3 globalAmbient = .5;
+    float3 ambient = emissive * globalAmbient;
+    float3 L = normalize(eyePosition - P);
+    float diffuseLight = max(dot(N, L), 0);
+    float Kd = .5;
+    float3 lightColor = float3(1.0, 1.0, 1.0);
+    float3 diffuse = Kd * lightColor * diffuseLight;
+    float3 V = normalize(eyePosition - P);
+    float3 H = normalize(L + V);
+    float3 shininess = .5;
+    float specularLight = pow(max(dot(N, H), 0), shininess);
+    if (diffuseLight <= 0) specularLight = 0;
+    float Ks = .5;
+    float3 specular = Ks * lightColor * specularLight;
+
+    OUT.color0.xyz = emissive + ambient + diffuse + specular;
+    OUT.color0.w = 1;
+
+    return OUT;
+}

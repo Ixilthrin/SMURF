@@ -1,0 +1,30 @@
+// Note how the fragment struct was simply copied from our vertex shader code.
+// This is necessary if we want to use a vertex and pixel shader together.
+
+struct fragment
+{
+	float4 position  : POSITION;
+	float4 color0    : COLOR0;
+	float2 texcoord0 : TEXCOORD0;
+};
+
+struct pixel
+{
+	float4 color : COLOR;
+};
+
+//-----------------------------------------------------------------------------
+// IN          - incoming fragment to be processed
+// testTexture - a texture for the pixel shader to use
+//-----------------------------------------------------------------------------
+
+pixel main( fragment IN,
+			uniform sampler2D testTexture )
+{
+	pixel OUT;
+
+	//OUT.color = tex2D( testTexture, IN.texcoord0 ) * IN.color0; // Modulate texel color with vertex color
+	OUT.color = tex2D( testTexture, IN.texcoord0 ) + IN.color0; // Add texel color to vertex color
+
+	return OUT;
+}

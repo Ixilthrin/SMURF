@@ -1,0 +1,72 @@
+struct appin
+{
+    float3 position  : POSITION;
+    float4 color0    : COLOR0;
+	float2 texcoord0 : TEXCOORD0;
+};
+
+struct fragment
+{
+	float4 position  : POSITION;
+	float4 color0    : COLOR0;
+	float2 texcoord0 : TEXCOORD0;
+};
+
+//-----------------------------------------------------------------------------
+// IN            - incoming per-vertex data to be processed
+// transform     - matrix representing current animation
+// worldViewProj - combined world-view-projection matrix
+//-----------------------------------------------------------------------------
+fragment main( appin IN,
+              uniform float numberOfTransforms,
+              uniform float totalTime,
+              uniform float currentTime,
+              uniform float4 frameTransforms[44],
+	          uniform float4x4 worldViewProj )
+
+{
+	fragment OUT;
+    
+	float4 v = float4( IN.position.x,
+		               IN.position.y,
+					   IN.position.z,
+					   1.0f );
+					   
+    float ratio = currentTime / totalTime;
+    int currentFrame = ratio * (numberOfTransforms - 1.0f);
+    float perFrameTime = totalTime / (numberOfTransforms - 1.0f);
+    float frameStartTime = (float) currentFrame * perFrameTime;
+    float frameTimeRatio = (currentTime - frameStartTime) / perFrameTime;
+    
+    // This is the "upper" matrix for the interpolation
+    float4x4 floorTransform = float4x4(frameTransforms[currentFrame * 4],
+                                       frameTransforms[currentFrame * 4 + 1],
+                                       frameTransforms[currentFrame * 4 + 2],
+                                       frameTransforms[currentFrame * 4 + 3]);
+     
+    // This is the "lower" matrix for the interpolation                                  
+    float4x4 ceilingTransform = float4x4(frameTransforms[currentFrame * 4 + 4],
+                                         frameTransforms[currentFrame * 4 + 5],
+                                         frameTransforms[currentFrame * 4 + 6],
+                                         frameTransforms[currentFrame * 4 + 7]);
+                      
+    float4x4 resultTransform = float4x4(floorTransform);
+    
+    // Do the interpolation to set the resultTransform
+    for (int i = 0; i < 4; i++)
+    {
+        for (int j = 0; j < 4; j++)
+        {
+            resultTransform[i][j] = frameTimeRatio * ceilingTransform[i][j] 
+                                    + (1.0f - frameTimeRatio) * floorTransform[i][j];
+        }
+    }
+     
+    // Apply the resultant transformation                                 
+	OUT.position  = mul(v, resultTransform);  // vector on the left since transform matrix is not transposed
+	OUT.position  = mul( worldViewProj, OUT.position );  // vector on the right since worldViewProj matrix is transposed
+	OUT.color0    = IN.color0;
+	OUT.texcoord0 = IN.texcoord0;
+
+	return OUT;
+}

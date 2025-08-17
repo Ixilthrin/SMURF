@@ -1,0 +1,122 @@
+struct appin
+{
+    float3 position  : POSITION;
+    float3 normal    : NORMAL;
+    float2 texcoord0 : TEXCOORD0;
+    float2 texcoord1 : TEXCOORD1;
+    float2 texcoord2 : TEXCOORD2;
+};
+
+struct fragment
+{
+    float4 position  : POSITION;
+    float2 texcoord0 : TEXCOORD0;
+};
+
+
+//-----------------------------------------------------------------------------
+// IN            - incoming per-vertex data to be processed
+// transform     - matrix representing current animation
+// worldViewProj - combined world-view-projection matrix
+//-----------------------------------------------------------------------------
+fragment main(appin IN,
+              uniform float4 offsetTransforms[40],
+              uniform float4 boneTransforms[40],
+              uniform float4x4 worldViewProj)
+
+{
+    fragment OUT;
+    int i = 0;
+    int j = 0;
+
+
+    int boneIndex0 = IN.texcoord1.x;
+    int boneIndex1 = IN.texcoord1.y;
+
+
+    float boneWeight0 = IN.texcoord2.x; 
+    float boneWeight1 = IN.texcoord2.y; 
+
+    // Normalize the weights (just in case)
+    float totalWeight = boneWeight0 + boneWeight1;
+    if (totalWeight > 0)
+    {
+        boneWeight0 = boneWeight0 / totalWeight; 
+        boneWeight1 = boneWeight1 / totalWeight; 
+    }
+   
+    float4x4 boneOffset0 = float4x4(offsetTransforms[boneIndex0 * 4],
+                                    offsetTransforms[boneIndex0 * 4 + 1],
+                                    offsetTransforms[boneIndex0 * 4 + 2],
+                                    offsetTransforms[boneIndex0 * 4 + 3]);
+
+    float4x4 boneOffset1 = float4x4(offsetTransforms[boneIndex1 * 4],
+                                    offsetTransforms[boneIndex1 * 4 + 1],
+                                    offsetTransforms[boneIndex1 * 4 + 2],
+                                    offsetTransforms[boneIndex1 * 4 + 3]);
+
+   
+    float4x4 boneTransform0 = float4x4(boneTransforms[boneIndex0 * 4],
+                                    boneTransforms[boneIndex0 * 4 + 1],
+                                    boneTransforms[boneIndex0 * 4 + 2],
+                                    boneTransforms[boneIndex0 * 4 + 3]);
+
+    float4x4 boneTransform1 = float4x4(boneTransforms[boneIndex1 * 4],
+                                    boneTransforms[boneIndex1 * 4 + 1],
+                                    boneTransforms[boneIndex1 * 4 + 2],
+                                    boneTransforms[boneIndex1 * 4 + 3]);
+                                    
+    float4x4 boneResult0 = mul(boneOffset0, boneTransform0);
+    float4x4 boneResult1 = mul(boneOffset1, boneTransform1);
+
+
+    ////////////////////////////////////////////////////////
+    //
+    // Interpolate the 2 bones according the the weights
+    //
+    ////////////////////////////////////////////////////////
+
+    float4x4 resultTransform = float4x4(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0);
+
+    // Do the interpolation to set the result animation transform
+    for (i = 0; i < 4; i++)
+    {
+        for (j = 0; j < 4; j++)
+        {
+              resultTransform[i][j] = boneWeight0 *  boneResult0[i][j]
+                                + boneWeight1 * boneResult1[i][j];
+        }
+    }
+
+    /////////////////////////////////////////////////////////////
+    //
+    // Get the final position by applying the result transform
+    //
+    /////////////////////////////////////////////////////////////
+
+
+    float4 initialPosition = float4(IN.position.x,
+                                    IN.position.y,
+                                    IN.position.z,
+                                    1.0f);
+
+    float4 resultPosition =  float4(IN.position.x,
+                                    IN.position.y,
+                                    IN.position.z,
+                                    1.0f);
+
+
+    resultPosition = mul(resultPosition, resultTransform);
+
+    // Vector on the right since worldViewProj matrix is transposed.
+    OUT.position  = mul( worldViewProj, resultPosition);
+
+
+
+    // Pass texture coordinates to the fragment shader.
+    OUT.texcoord0 = IN.texcoord0;
+
+    return OUT;
+
+
+}

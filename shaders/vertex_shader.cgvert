@@ -1,0 +1,35 @@
+struct appin
+{
+    float3 position  : POSITION;
+    float4 color0    : COLOR0;
+    float2 texcoord0 : TEXCOORD0;
+};
+
+struct fragment
+{
+	float4 position  : POSITION;
+	float4 color0    : COLOR0;
+	float2 texcoord0 : TEXCOORD0;
+};
+
+//-----------------------------------------------------------------------------
+// IN            - incoming per-vertex data to be processed
+// worldViewProj - combined world-view-projection matrix
+//-----------------------------------------------------------------------------
+fragment main( appin IN,
+	          uniform float4x4 worldViewProj )
+
+{
+	fragment OUT;
+
+	float4 v = float4( IN.position.x,
+		               IN.position.y,
+					   IN.position.z,
+					   1.0f );
+
+	OUT.position  = mul( worldViewProj, v );
+	OUT.color0    = IN.color0;
+	OUT.texcoord0 = IN.texcoord0;
+
+	return OUT;
+}
